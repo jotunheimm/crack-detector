@@ -478,15 +478,66 @@ class CrackDetectorApp:
 
     # ── Capture ────────────────────────────────────────────────────────────────
     def _upload_image(self):
-        tmp = tempfile.NamedTemporaryFile(suffix=".jpg", delete=False)
-        tmp.close()
-        self._set_status("Taking photo…", PRIMARY)
+        self._set_status("📷 Taking photo…", PRIMARY)
         self.upload_btn.config(state="disabled", fg=TEXT_MUTED)
         self.root.update()
+        if sys.platform == "win32":
+            threading.Thread(target=self._capture_windows, daemon=True).start()
+        else:
+            self._capture_mac()
+
+    def _capture_windows(self):
+        """Capture a single frame from webcam using OpenCV (Windows)."""
+        try:
+            cap = cv2.VideoCapture(0, cv2.CAP_DSHOW)
+            if not cap.isOpened():
+                self.root.after(
+                    0, lambda: self._set_status("✗ No camera found", DANGER)
+                )
+                self.root.after(
+                    0, lambda: self.upload_btn.config(state="normal", fg=PRIMARY)
+                )
+                return
+            # Warm up — skip first few frames so exposure adjusts
+            for _ in range(5):
+                cap.read()
+            ret, frame = cap.read()
+            cap.release()
+            if not ret or frame is None:
+                self.root.after(
+                    0, lambda: self._set_status("✗ Failed to capture", DANGER)
+                )
+                self.root.after(
+                    0, lambda: self.upload_btn.config(state="normal", fg=PRIMARY)
+                )
+                return
+            tmp = tempfile.NamedTemporaryFile(suffix=".jpg", delete=False)
+            tmp.close()
+            cv2.imwrite(tmp.name, frame)
+            self.current_image_path = tmp.name
+            self.root.after(0, lambda: self._display_image(tmp.name))
+            self.root.after(
+                0, lambda: self.analyze_btn.config(state="normal", fg=PRIMARY)
+            )
+            self.root.after(
+                0, lambda: self._set_status("Photo ready — click Analyze", TEXT_MUTED)
+            )
+            self.root.after(0, self._clear_stats)
+        except Exception as e:
+            self.root.after(0, lambda: self._set_status(f"✗ {e}", DANGER))
+        finally:
+            self.root.after(
+                0, lambda: self.upload_btn.config(state="normal", fg=PRIMARY)
+            )
+
+    def _capture_mac(self):
+        """Capture using imagesnap (Mac)."""
+        tmp = tempfile.NamedTemporaryFile(suffix=".jpg", delete=False)
+        tmp.close()
         result = subprocess.run(["imagesnap", "-w", "1", tmp.name], capture_output=True)
         self.upload_btn.config(state="normal", fg=PRIMARY)
         if result.returncode != 0:
-            self._set_status("Run: brew install imagesnap", DANGER)
+            self._set_status("✗ Run: brew install imagesnap", DANGER)
             return
         self.current_image_path = tmp.name
         self._display_image(tmp.name)
