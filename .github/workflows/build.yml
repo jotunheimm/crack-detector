@@ -24,11 +24,7 @@ jobs:
         run: pip install ultralytics opencv-python pillow numpy pyinstaller
 
       - name: Build .exe
-        run: |
-          pyinstaller --noconfirm --onefile --windowed `
-            --add-data "best.pt;." `
-            --name "CrackScan" `
-            app.py
+        run: pyinstaller --noconfirm --onefile --windowed --add-data "best.pt;." --name "CrackScan" app.py
 
       - name: Upload .exe
         uses: actions/upload-artifact@v4
@@ -36,16 +32,3 @@ jobs:
           name: CrackScan-Windows
           path: dist/CrackScan.exe
           retention-days: 30
-```
-
----
-
-**STEP 5 — Update requirements.txt**
-
-Click `requirements.txt` in VS Code sidebar, make sure it has exactly this, then `Cmd + S`:
-```
-ultralytics
-opencv-python
-pillow
-numpy
-pyinstaller
