@@ -367,6 +367,28 @@ class CrackDetectorApp:
         self.sidebar.grid(row=0, column=0, sticky="nsew")
         self.sidebar.pack_propagate(False)
 
+        # ── Scrollable inner frame ────────────────────────────────────────────
+        _sb = tk.Scrollbar(self.sidebar, orient="vertical", width=6)
+        _sb.pack(side="right", fill="y")
+        _scroll_canvas = tk.Canvas(
+            self.sidebar, bg=BG, bd=0, highlightthickness=0,
+            yscrollcommand=_sb.set
+        )
+        _scroll_canvas.pack(side="left", fill="both", expand=True)
+        _sb.config(command=_scroll_canvas.yview)
+        self.sidebar = tk.Frame(_scroll_canvas, bg=BG)
+        _cw = _scroll_canvas.create_window((0, 0), window=self.sidebar, anchor="nw")
+        self.sidebar.bind("<Configure>", lambda e: _scroll_canvas.configure(
+            scrollregion=_scroll_canvas.bbox("all")
+        ))
+        _scroll_canvas.bind("<Configure>", lambda e: _scroll_canvas.itemconfig(
+            _cw, width=e.width
+        ))
+        _scroll_canvas.bind_all("<MouseWheel>", lambda e: _scroll_canvas.yview_scroll(
+            int(-1 * (e.delta / 120)), "units"
+        ))
+        # ─────────────────────────────────────────────────────────────────────
+
         # Brand
         header = tk.Frame(self.sidebar, bg=PRIMARY, height=64)
         header.pack(fill="x")
@@ -395,6 +417,25 @@ class CrackDetectorApp:
             fg=PRIMARY_MID,
             bg=PRIMARY,
         ).pack(anchor="w")
+
+        # API Server IP bar
+        _local_ip = _get_local_ip()
+        ip_bar = tk.Frame(self.sidebar, bg=PRIMARY_TINT, highlightbackground=PRIMARY_MID, highlightthickness=1)
+        ip_bar.pack(fill="x", padx=16, pady=(10, 0))
+        tk.Label(
+            ip_bar,
+            text="API SERVER",
+            font=("Helvetica", 8, "bold"),
+            fg=TEXT_MUTED,
+            bg=PRIMARY_TINT,
+        ).pack(side="left", padx=(10, 6), pady=6)
+        tk.Label(
+            ip_bar,
+            text=f"{_local_ip}:8000",
+            font=("Helvetica", 11, "bold"),
+            fg=PRIMARY,
+            bg=PRIMARY_TINT,
+        ).pack(side="left", pady=6)
 
         # Mode tabs (3)
         self._sidebar_label("MODE")
@@ -774,24 +815,6 @@ class CrackDetectorApp:
             padx=10,
             pady=3,
         )
-        # Show local IP so user knows what to enter in crackscan_display.ino
-        _local_ip = _get_local_ip()
-        ip_col = tk.Frame(topbar, bg=CARD)
-        ip_col.pack(side="left", padx=(16, 0), pady=8)
-        tk.Label(
-            ip_col,
-            text="API SERVER",
-            font=("Helvetica", 8, "bold"),
-            fg=TEXT_MUTED,
-            bg=CARD,
-        ).pack(anchor="w")
-        tk.Label(
-            ip_col,
-            text=f"{_local_ip}:8000",
-            font=("Helvetica", 11, "bold"),
-            fg=PRIMARY,
-            bg=CARD,
-        ).pack(anchor="w")
 
         content = tk.Frame(self.main, bg=BG)
         content.grid(row=1, column=0, sticky="nsew", padx=16, pady=16)
@@ -1611,26 +1634,19 @@ class CrackDetectorApp:
                         f"Avg confidence: {avg_conf:.1f}%."
                     ),
                 )
-                self.root.after(
-                    0,
-                    lambda: (
-                        self.fb_status_var.set(
-                            f"✓ Saved! [{classification}] ID: {doc_id[:8]}…"
-                        ),
-                        self.fb_status_lbl.config(fg=SUCCESS),
-                        self.save_fb_btn.config(state="normal"),
-                    ),
-                )
+                _msg = f"✓ Saved! [{classification}] ID: {doc_id[:8]}…"
+                def _on_success(msg=_msg):
+                    self.fb_status_var.set(msg)
+                    self.fb_status_lbl.config(fg=SUCCESS)
+                    self.save_fb_btn.config(state="normal")
+                self.root.after(0, _on_success)
             except Exception as e:
                 err = str(e)
-                self.root.after(
-                    0,
-                    lambda: (
-                        self.fb_status_var.set(f"✗ Error: {err}"),
-                        self.fb_status_lbl.config(fg=DANGER),
-                        self.save_fb_btn.config(state="normal"),
-                    ),
-                )
+                def _on_error(msg=err):
+                    self.fb_status_var.set(f"✗ Error: {msg}")
+                    self.fb_status_lbl.config(fg=DANGER)
+                    self.save_fb_btn.config(state="normal")
+                self.root.after(0, _on_error)
 
         threading.Thread(target=_worker, daemon=True).start()
     # ────────────────────────────────────────────────────────────────────
