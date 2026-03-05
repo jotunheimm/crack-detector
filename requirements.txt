@@ -1,7 +1,9 @@
 ultralytics
 opencv-python
 pillow
+numpy
 pyinstaller
 google-auth
 google-auth-httplib2
 requests
+flask

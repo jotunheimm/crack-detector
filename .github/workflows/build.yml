@@ -21,7 +21,7 @@ jobs:
           python-version: "3.11"
 
       - name: Install dependencies
-        run: pip install ultralytics opencv-python pillow numpy pyinstaller
+        run: pip install -r requirements.txt
 
       - name: Build .exe
         run: pyinstaller --noconfirm --onefile --windowed --add-data "best.pt;." --name "CrackScan" app.py
