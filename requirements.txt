@@ -2,3 +2,6 @@ ultralytics
 opencv-python
 pillow
 pyinstaller
+google-auth
+google-auth-httplib2
+requests
