@@ -26,7 +26,12 @@ except ImportError:
     _firebase_ok = False
 
 # Load .env from the project directory
-_PROJECT_DIR = os.path.dirname(os.path.abspath(__file__))
+# When bundled by PyInstaller, use the folder containing the .exe;
+# when running as a plain .py script, use the script's directory.
+if getattr(sys, 'frozen', False):
+    _PROJECT_DIR = os.path.dirname(sys.executable)
+else:
+    _PROJECT_DIR = os.path.dirname(os.path.abspath(__file__))
 _env_path = os.path.join(_PROJECT_DIR, ".env")
 if os.path.exists(_env_path):
     with open(_env_path) as _f:
