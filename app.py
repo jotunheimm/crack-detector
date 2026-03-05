@@ -1131,9 +1131,15 @@ class CrackDetectorApp:
     def _start_ip_stream(self):
         base = self._base_url()
         stream_url = f"{base}/stream"
-        cap = cv2.VideoCapture(stream_url)
-        cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)
-        if cap.isOpened():
+        try:
+            cap = cv2.VideoCapture(stream_url)
+            cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)
+            opened = cap.isOpened()
+        except Exception as e:
+            self._set_status(f"Stream error: {e} — using snapshot", WARNING)
+            opened = False
+            cap = None
+        if opened:
             self.cap = cap
             self.ip_cam_running = True
             self.ip_connect_btn.config(text="■  Disconnect", fg=DANGER)
@@ -1141,7 +1147,8 @@ class CrackDetectorApp:
             self.ip_live_dot.pack(side="right", padx=(0, 8), pady=16)
             threading.Thread(target=self._ip_stream_loop, daemon=True).start()
         else:
-            cap.release()
+            if cap:
+                cap.release()
             self._set_status("MJPEG failed — using snapshot polling", WARNING)
             self.ip_cam_running = True
             self.ip_connect_btn.config(text="■  Disconnect", fg=DANGER)

@@ -23,8 +23,25 @@ jobs:
       - name: Install dependencies
         run: pip install -r requirements.txt
 
+      - name: Collect OpenCV ffmpeg DLL path
+        id: ocv
+        run: |
+          python -c "
+import cv2, os, glob
+base = os.path.dirname(cv2.__file__)
+dlls = glob.glob(os.path.join(base, '*ffmpeg*.dll'))
+print('OPENCV_DIR=' + base)
+print('FFMPEG_DLLS=' + ';'.join(dlls))
+" >> $env:GITHUB_OUTPUT
+        shell: pwsh
+
       - name: Build .exe
-        run: pyinstaller --noconfirm --onefile --windowed --add-data "best.pt;." --name "CrackScan" app.py
+        run: >
+          pyinstaller --noconfirm --onefile --windowed
+          --add-data "best.pt;."
+          --add-binary "${{ steps.ocv.outputs.OPENCV_DIR }}\opencv_videoio_ffmpeg*.dll;."
+          --hidden-import="cv2"
+          --name "CrackScan" app.py
 
       - name: Upload .exe
         uses: actions/upload-artifact@v4
